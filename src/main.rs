@@ -1,5 +1,6 @@
 use reqwest::{get, Error};
 use serde::{Deserialize, Serialize};
+use std::fs;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WOTD {
@@ -9,8 +10,12 @@ struct WOTD {
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    let resp = get("https://api.wordnik.com/v4/words.json/randomWord?hasDictionaryDef=true&minLength=5&maxLength=-1&api_key=5vl8hqmmi8dw4lwe13jcd5zf0q3cenlh1zqci78gk2jp1wdbj").await?.text().await?;
+    let env = fs::read_to_string(".env").expect("Something went wrong reading the file");
+    let api_key: Vec<&str> = env.split("api_key=").collect();
+    let api_key: String = api_key[1].to_string();
+    let url = format!("https://api.wordnik.com/v4/words.json/randomWord?hasDictionaryDef=true&minLength=5&maxLength=-1&api_key={}", api_key);
+    let resp = get(&url).await?.text().await?;
     let wotd: WOTD = serde_json::from_str(&resp).unwrap();
-    println!("{:#?}", wotd.word);
+    println!("Word of the Day is: {}", wotd.word);
     Ok(())
 }
