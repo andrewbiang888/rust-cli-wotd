@@ -5,7 +5,7 @@ use reqwest::{get, Error};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use structopt::StructOpt;
-use indicatif;
+use indicatif::ProgressBar;
 
 #[derive(Debug, Serialize, Deserialize)]
 struct WOTD {
@@ -16,7 +16,7 @@ struct WOTD {
 #[derive(Debug, StructOpt)]
 struct Cli {
     arg: String,
-    word: String,
+    word: Option<String>,
 }
 
 #[tokio::main]
@@ -26,10 +26,10 @@ async fn main() -> Result<(), Error> {
     let api_key: String = api_key[1].to_string();
     let args = Cli::from_args();
     let command = args.arg;
-    let lookup = args.word;
+    
     match &command[..] {
         "get" => {
-            let pb = indicatif::ProgressBar::new(100);
+            let pb = ProgressBar::new(100);
             let url = format!("https://api.wordnik.com/v4/words.json/randomWord?hasDictionaryDef=true&minLength=5&maxLength=-1&api_key={}", api_key);
             let resp = get(&url).await?.text().await?;
             for _ in 0..100 {
@@ -41,7 +41,15 @@ async fn main() -> Result<(), Error> {
             println!("Word of the Day is: {}", wotd.word);
         }
         "define" => {
-            let pb = indicatif::ProgressBar::new(100);
+            let pb = ProgressBar::new(100);
+            let lookup = match args.word {
+                Some(val) => val,
+                None => String::from("nil"),
+            };
+            if lookup == String::from("nil") {
+                println!("To define a word, please provide one. Ex: \"wotd define sup\"");
+                return Ok(())
+            }
             let url = format!("https://api.wordnik.com/v4/word.json/{}/definitions?limit=1&sourceDictionaries=webster&includeRelated=false&useCanonical=false&includeTags=false&api_key={}", lookup, api_key);
             let resp = get(&url).await?.text().await?;
             for _ in 0..100 {
